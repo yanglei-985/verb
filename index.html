@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Conjugaison Française</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">Test de Conjugaison Française</h1>
+            
+            <!-- Main Form -->
+            <form id="conjugationForm" class="mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="verb">
+                            Verbe
+                        </label>
+                        <div class="flex">
+                            <input
+                                type="text"
+                                id="verb"
+                                class="flex-1 border rounded-l p-2 w-full"
+                                placeholder="Entrez un verbe (ex: parler)"
+                            />
+                            <button
+                                type="button"
+                                id="randomVerbBtn"
+                                class="bg-blue-500 text-white p-2 rounded-r hover:bg-blue-600"
+                            >
+                                Aléatoire
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="tense">
+                            Temps
+                        </label>
+                        <div class="flex">
+                            <select
+                                id="tense"
+                                class="flex-1 border rounded-l p-2 w-full"
+                            >
+                                <option value="présent">présent</option>
+                                <option value="imparfait">imparfait</option>
+                                <option value="passé composé">passé composé</option>
+                                <option value="futur simple">futur simple</option>
+                                <option value="conditionnel présent">conditionnel présent</option>
+                                <option value="subjonctif présent">subjonctif présent</option>
+                                <option value="impératif présent">impératif présent</option>
+                                <option value="plus-que-parfait">plus-que-parfait</option>
+                            </select>
+                            <button
+                                type="button"
+                                id="randomTenseBtn"
+                                class="bg-blue-500 text-white p-2 rounded-r hover:bg-blue-600"
+                            >
+                                Aléatoire
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2" for="answer">
+                        Votre réponse (1ère personne du singulier)
+                    </label>
+                    <input
+                        type="text"
+                        id="answer"
+                        class="border rounded p-2 w-full"
+                        placeholder="Entrez la conjugaison (ex: je parle)"
+                    />
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button
+                        type="submit"
+                        id="checkBtn"
+                        class="bg-green-500 text-white p-2 rounded hover:bg-green-600 flex-1"
+                    >
+                        Vérifier
+                    </button>
+                    <button
+                        type="button"
+                        id="randomTestBtn"
+                        class="bg-purple-500 text-white p-2 rounded hover:bg-purple-600 flex-1"
+                    >
+                        Nouveau test aléatoire
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Results Section -->
+            <div id="resultSection" class="hidden p-4 rounded-lg mb-6">
+                <h2 id="resultMessage" class="text-xl font-bold mb-2"></h2>
+                <div id="correctAnswer" class="mb-2"></div>
+                <div class="mt-2">
+                    <h3 class="font-bold">Explication:</h3>
+                    <p id="explanation"></p>
+                </div>
+                <p id="tips" class="mt-2 font-italic"></p>
+            </div>
+            
+            <!-- Statistics Section -->
+            <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                <h2 class="text-xl font-bold mb-2">Statistiques</h2>
+                <div class="flex justify-between items-center">
+                    <p>
+                        Réponses correctes: <strong id="correctCount">0</strong> / <span id="totalCount">0</span>
+                    </p>
+                    <p>
+                        Taux de réussite: <strong id="successRate">0%</strong>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- History Section -->
+            <div id="historySection" class="hidden">
+                <h2 class="text-xl font-bold mb-2">Historique</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-200">
+                                <th class="border p-2 text-left">Verbe</th>
+                                <th class="border p-2 text-left">Temps</th>
+                                <th class="border p-2 text-left">Votre réponse</th>
+                                <th class="border p-2 text-left">Réponse correcte</th>
+                                <th class="border p-2 text-center">Résultat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_ENDPOINT = 'https://api.aigc.bar/v1/chat/completions';
+        const API_KEY = 'sk-G8fwDqN0IaB0hayInoXa7I72vwSdd9V4C2K9c1wwmncvEHjH';
+
+        // 常用动词列表
+        const randomVerbs = ['parler', 'finir', 'vendre', 'être', 'avoir', 'aller', 'faire', 'prendre', 'voir', 'pouvoir'];
+        
+        // 统计数据
+        let stats = { correct: 0, total: 0 };
+        let history = [];
+
+        // DOM元素
+        const form = document.getElementById('conjugationForm');
+        const verbInput = document.getElementById('verb');
+        const tenseSelect = document.getElementById('tense');
+        const answerInput = document.getElementById('answer');
+        const resultSection = document.getElementById('resultSection');
+        const resultMessage = document.getElementById('resultMessage');
+        const correctAnswer = document.getElementById('correctAnswer');
+        const explanation = document.getElementById('explanation');
+        const tips = document.getElementById('tips');
+        
+        // 检查变位
+        async function checkConjugation(event) {
+            event.preventDefault();
+            
+            const verb = verbInput.value.trim();
+            const tense = tenseSelect.value;
+            const userAnswer = answerInput.value.trim();
+            
+            if (!verb || !userAnswer) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "你是一个专业的法语动词变位分析工具。"
+                            },
+                            {
+                                role: "user",
+                                content: `请分析法语动词 "${verb}" 在 ${tense} 时态下的变位。请返回正确的变位形式。以及变位的输出形式就是 人称 动词变位形式`
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                
+                // 显示结果
+                displayResult(content, userAnswer, verb, tense);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Une erreur est survenue lors de la vérification.');
+            }
+        }
+        
+        // 显示结果
+        function displayResult(apiResponse, userAnswer, verb, tense) {
+            const isCorrect = apiResponse.toLowerCase().includes(userAnswer.toLowerCase());
+            
+            resultSection.className = `p-4 rounded-lg mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
+            resultSection.classList.remove('hidden');
+            
+            resultMessage.textContent = isCorrect ? 
+                'Bravo ! Votre réponse est correcte.' : 
+                'Votre réponse n\'est pas correcte.';
+            
+            correctAnswer.innerHTML = `Réponse correcte: <strong>${apiResponse}</strong>`;
+            explanation.textContent = `${tense}时态的变位规则说明`;
+            tips.textContent = isCorrect ? 
+                'Continuez comme ça !' : 
+                `Conseil: Révisez la conjugaison des verbes au ${tense}.`;
+            
+            // 更新统计
+            updateStats(isCorrect);
+            // 更新历史记录
+            updateHistory(verb, tense, userAnswer, apiResponse, isCorrect);
+        }
+        
+        // 更新统计
+        function updateStats(isCorrect) {
+            stats.total++;
+            if (isCorrect) stats.correct++;
+            
+            document.getElementById('correctCount').textContent = stats.correct;
+            document.getElementById('totalCount').textContent = stats.total;
+            document.getElementById('successRate').textContent = 
+                `${Math.round((stats.correct / stats.total) * 100)}%`;
+        }
+        
+        // 更新历史记录
+        function updateHistory(verb, tense, userAnswer, correctAnswer, isCorrect) {
+            const historySection = document.getElementById('historySection');
+            const historyTableBody = document.getElementById('historyTableBody');
+            
+            historySection.classList.remove('hidden');
+            
+            const row = document.createElement('tr');
+            row.className = isCorrect ? 'bg-green-50' : 'bg-red-50';
+            
+            row.innerHTML = `
+                <td class="border p-2">${verb}</td>
+                <td class="border p-2">${tense}</td>
+                <td class="border p-2">${userAnswer}</td>
+                <td class="border p-2">${correctAnswer}</td>
+                <td class="border p-2 text-center">${isCorrect ? '✅' : '❌'}</td>
+            `;
+            
+            historyTableBody.insertBefore(row, historyTableBody.firstChild);
+        }
+        
+        // 随机动词
+        document.getElementById('randomVerbBtn').addEventListener('click', () => {
+            const randomIndex = Math.floor(Math.random() * randomVerbs.length);
+            verbInput.value = randomVerbs[randomIndex];
+        });
+        
+        // 随机时态
+        document.getElementById('randomTenseBtn').addEventListener('click', () => {
+            const options = tenseSelect.options;
+            const randomIndex = Math.floor(Math.random() * options.length);
+            tenseSelect.selectedIndex = randomIndex;
+        });
+        
+        // 随机测试
+        document.getElementById('randomTestBtn').addEventListener('click', () => {
+            document.getElementById('randomVerbBtn').click();
+            document.getElementById('randomTenseBtn').click();
+            answerInput.value = '';
+            resultSection.classList.add('hidden');
+        });
+        
+        // 表单提交
+        form.addEventListener('submit', checkConjugation);
+    </script>
+</body>
+</html>

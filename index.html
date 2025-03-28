@@ -222,45 +222,84 @@ il/elle/on: parle
         }
         
         // Display the result in a neatly formatted table
-        function displayResult(apiResponse, userAnswer, verb, tense) {
-            // 判断用户答案是否正确（简单匹配，建议根据实际情况改进判断逻辑）
-            const isCorrect = apiResponse.toLowerCase().includes(userAnswer.toLowerCase());
-            
-            resultSection.className = `p-4 rounded-lg mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
-            resultSection.classList.remove('hidden');
-            
-            resultMessage.textContent = isCorrect ? 
-                'Bravo ! Votre réponse est correcte.' : 
-                'Votre réponse n\'est pas correcte.';
-            
-            // 将 API 返回的文本按换行分割，并解析成表格行
-            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300">`;
-            tableHTML += `<thead><tr><th class="border border-gray-300 p-2">Personne</th><th class="border border-gray-300 p-2">Conjugaison</th></tr></thead>`;
-            tableHTML += `<tbody>`;
-            const lines = apiResponse.split('\n').filter(line => line.trim() !== '');
-            for (const line of lines) {
-                const parts = line.split(/[:：]/);
-                if (parts.length >= 2) {
-                    const personne = parts[0].trim();
-                    const conjugaison = parts.slice(1).join(':').trim();
-                    tableHTML += `<tr><td class="border border-gray-300 p-2">${personne}</td><td class="border border-gray-300 p-2">${conjugaison}</td></tr>`;
+       function displayResult(apiResponse, userAnswer, verb, tense) {
+    // 简单判断用户答案是否正确
+    const isCorrect = apiResponse.toLowerCase().includes(userAnswer.toLowerCase());
+    
+    // 切换结果区背景色
+    resultSection.className = `p-4 rounded-lg mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
+    resultSection.classList.remove('hidden');
+    
+    resultMessage.textContent = isCorrect 
+        ? 'Bravo ! Votre réponse est correcte.' 
+        : 'Votre réponse n\'est pas correcte.';
+    
+    // 拆分 API 返回文本
+    const lines = apiResponse
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
+    
+    // 构建表格
+    let tableHTML = `
+      <table class="min-w-full border-collapse border border-gray-300">
+        <thead>
+          <tr>
+            <th class="border border-gray-300 p-2">Personne</th>
+            <th class="border border-gray-300 p-2">Conjugaison</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    for (const line of lines) {
+        // 如果这一行包含冒号，则按冒号分割
+        if (line.includes(':')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length >= 2) {
+                const personne = parts[0].trim();
+                const conjugaison = parts.slice(1).join(':').trim();
+                tableHTML += `
+                  <tr>
+                    <td class="border border-gray-300 p-2">${personne}</td>
+                    <td class="border border-gray-300 p-2">${conjugaison}</td>
+                  </tr>
+                `;
+            }
+        } else {
+            // 如果没有冒号，则尝试用空格拆分 (例如 "je prends")
+            // 先排除类似“以下是法语动词…”这种行
+            if (/^(je|j'|tu|il|elle|on|nous|vous|ils|elles)/i.test(line)) {
+                const spaceParts = line.split(/\s+/);
+                if (spaceParts.length >= 2) {
+                    const personne = spaceParts[0];
+                    const conjugaison = spaceParts.slice(1).join(' ');
+                    tableHTML += `
+                      <tr>
+                        <td class="border border-gray-300 p-2">${personne}</td>
+                        <td class="border border-gray-300 p-2">${conjugaison}</td>
+                      </tr>
+                    `;
                 }
             }
-            tableHTML += `</tbody></table>`;
-            correctAnswer.innerHTML = `Réponse correcte: <br>${tableHTML}`;
-            
-            explanation.textContent = `${tense}时态的变位规则说明`;
-            tips.textContent = isCorrect ? 
-                'Continuez comme ça !' : 
-                `Conseil: Révisez la conjugaison des verbes au ${tense}.`;
-            
-            // 更新统计数据
-            updateStats(isCorrect);
-            // 更新历史记录
-            updateHistory(verb, tense, userAnswer, apiResponse, isCorrect);
         }
-        
-        // Update statistics
+    }
+    
+    tableHTML += `</tbody></table>`;
+    
+    // 将表格插入到页面
+    correctAnswer.innerHTML = `Réponse correcte: <br>${tableHTML}`;
+    
+    explanation.textContent = `${tense}时态的变位规则说明`;
+    tips.textContent = isCorrect 
+        ? 'Continuez comme ça !' 
+        : `Conseil: Révisez la conjugaison des verbes au ${tense}.`;
+    
+    // 更新统计和历史
+    updateStats(isCorrect);
+    updateHistory(verb, tense, userAnswer, apiResponse, isCorrect);
+}
+
         function updateStats(isCorrect) {
             stats.total++;
             if (isCorrect) stats.correct++;

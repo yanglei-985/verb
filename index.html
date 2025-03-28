@@ -300,6 +300,97 @@ il/elle/on: parle
     updateStats(isCorrect);
     updateHistory(verb, tense, userAnswer, apiResponse, isCorrect);
 }
+/**
+ * 将字符串转为小写、去除多余空格、把 j' 变为 je
+ */
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/^j'\s+/, 'je ')
+    .replace(/^j'$/, 'je')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * 比较两个法语变位是否一致，并对第三人称单数做特殊处理
+ */
+function compareConjugation(userAnswer, correctForm) {
+  let normalizedUser = normalize(userAnswer);
+  let normalizedCorrect = normalize(correctForm);
+
+  const thirdPersonPronouns = ["il", "elle", "on"];
+
+  // 如果用户答案仅为单独一个第三人称代词，则只比较 GPT 返回答案的首个单词
+  if (thirdPersonPronouns.includes(normalizedUser)) {
+    const firstWord = normalizedCorrect.split(" ")[0];
+    return thirdPersonPronouns.includes(firstWord);
+  }
+
+  // 如果 GPT 返回答案以第三人称代词开头，则同时去除双方的代词部分后再比较
+  for (const pronoun of thirdPersonPronouns) {
+    if (normalizedCorrect.startsWith(pronoun + " ")) {
+      normalizedCorrect = normalizedCorrect.substring(pronoun.length).trim();
+      // 如果用户答案也以任一第三人称代词开头，则去掉
+      for (const p of thirdPersonPronouns) {
+        if (normalizedUser.startsWith(p + " ")) {
+          normalizedUser = normalizedUser.substring(p.length).trim();
+          break;
+        }
+      }
+      break;
+    }
+  }
+  return normalizedUser === normalizedCorrect;
+}
+/**
+ * 从 GPT 返回的文本中解析出各个人称的变位
+ * 返回一个对象 { "je": "prends", "tu": "prends", ... }
+ */
+function parseConjugationTable(apiResponse) {
+  // 按行分割并去除空白
+  const lines = apiResponse
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line);
+
+  const conjugations = {};
+
+  for (const line of lines) {
+    // 如果包含冒号，则用冒号分割
+    if (line.includes(':')) {
+      const parts = line.split(/[:：]/);
+      if (parts.length >= 2) {
+        let personne = parts[0].trim().toLowerCase();
+        let forme = parts.slice(1).join(':').trim();
+
+        // 如果是 j' 则统一存为 je
+        if (personne === "j'") {
+          personne = "je";
+        }
+        // 存到对象里
+        conjugations[personne] = forme;
+      }
+    } else {
+      // 如果没有冒号，就尝试空格分割，比如 "je parle"
+      const spaceParts = line.split(/\s+/);
+      if (spaceParts.length >= 2) {
+        let personne = spaceParts[0].toLowerCase();
+        let forme = spaceParts.slice(1).join(' ');
+
+        if (personne === "j'") {
+          personne = "je";
+        }
+        // 如果确实是常见人称，则存储
+        if (["je","tu","il","elle","on","nous","vous","ils","elles"].includes(personne)) {
+          conjugations[personne] = forme;
+        }
+      }
+    }
+  }
+
+  return conjugations;
+}
 
         function updateStats(isCorrect) {
             stats.total++;

@@ -184,22 +184,27 @@
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "gpt-4o-mini",
+                        model: "gpt-4o",
                         messages: [
                             {
-                                role: "system",
-                                content: "你是一个专业的法语动词变位分析工具。"
-                            },
-                            {
-                                role: "user",
-                                content: `请分析法语动词 "${verb}" 在 ${tense} 时态下的变位。请以表格形式输出，每行显示人称和对应的动词变位，格式为：人称: 动词变位形式。请注意法语的省音现象，例如当“je”遇到元音开头的动词时应变为“j'”。`
-                            }
+  role: "user",
+  content: `请分析法语动词 "${verb}" 在 ${tense} 时态下的变位。请严格使用以下格式，每行一条，且仅包含人称和对应的变位，用冒号分隔。例如：
+je: parle
+tu: parles
+il/elle/on: parle
+...
+请注意法语的省音现象，比如 "je" 遇到元音动词时写作 "j'"。不要输出额外说明或标题。`
+}
+
                         ],
                         temperature: 0.7,
                         max_tokens: 1000
                     })
                 });
 
+
+
+                
                 if (!response.ok) {
                     throw new Error(`API请求失败: ${response.status}`);
                 }

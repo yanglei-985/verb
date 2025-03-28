@@ -40,18 +40,19 @@
                             Temps
                         </label>
                         <div class="flex">
-                            <select
-                                id="tense"
-                                class="flex-1 border rounded-l p-2 w-full"
-                            >
-                                <option value="présent">présent</option>
-                                <option value="imparfait">imparfait</option>
-                                <option value="passé composé">passé composé</option>
-                                <option value="futur simple">futur simple</option>
-                                <option value="conditionnel présent">conditionnel présent</option>
-                                <option value="subjonctif présent">subjonctif présent</option>
-                                <option value="impératif présent">impératif présent</option>
-                                <option value="plus-que-parfait">plus-que-parfait</option>
+                            <select id="tense" class="flex-1 border rounded-l p-2 w-full">
+                                <option value="présent">Présent</option>
+                                <option value="imparfait">Imparfait</option>
+                                <option value="passé composé">Passé Composé</option>
+                                <option value="plus-que-parfait">Plus-que-parfait</option>
+                                <option value="futur simple">Futur Simple</option>
+                                <option value="futur antérieur">Futur Antérieur</option>
+                                <option value="conditionnel présent">Conditionnel Présent</option>
+                                <option value="conditionnel passé">Conditionnel Passé</option>
+                                <option value="subjonctif présent">Subjonctif Présent</option>
+                                <option value="subjonctif passé">Subjonctif Passé</option>
+                                <option value="impératif présent">Impératif Présent</option>
+                                <option value="impératif passé">Impératif Passé</option>
                             </select>
                             <button
                                 type="button"
@@ -140,18 +141,17 @@
     </div>
 
     <script>
-        // API配置
+        // API configuration
         const API_ENDPOINT = 'https://api.aigc.bar/v1/chat/completions';
         const API_KEY = 'sk-G8fwDqN0IaB0hayInoXa7I72vwSdd9V4C2K9c1wwmncvEHjH';
 
-        // 常用动词列表
-        const randomVerbs = ['avoir', 'être', 'être aimé', 'se méfier', 'aimer', 'placer', 'manger', 'peser', 'céder', 'jeter', 'modeler', 'créer', 'assiéger', 'apprécier', 'payer', 'broyer', 'envoyer', 'finir', 'haïr', 'aller', 'tenir', 'acquérir', 'sentir', 'vêtir', 'couvrir', 'cueillir', 'assaillir', 'faillir', 'bouillir', 'dormir', 'courir', 'mourir', 'servir', 'fuir', 'ouïr', 'gésir', 'recevoir', 'voir', 'pourvoir', 'savoir', 'devoir', 'pouvoir', 'mouvoir', 'pleuvoir', 'falloir', 'valoir', 'vouloir', 'asseoir', 'seoir', 'messeoir', 'surseoir', 'choir', 'échoir', 'déchoir', 'rendre', 'prendre', 'battre', 'mettre', 'peindre', 'joindre', 'craindre', 'vaincre', 'traire', 'faire', 'plaire', 'connaître', 'naître', 'paître', 'croître', 'croire', 'boire', 'clore', 'conclure', 'absoudre', 'coudre', 'moudre', 'suivre', 'vivre', 'lire', 'dire', 'rire', 'écrire', 'confire', 'cuire', 'parler', 'vendre'];
+        // Common verb list
+        const randomVerbs = ['avoir', 'être', 'aimer', 'parler', 'finir', 'prendre', 'aller', 'venir', 'voir', 'savoir'];
         
-        // 统计数据
+        // Statistics
         let stats = { correct: 0, total: 0 };
-        let history = [];
 
-        // DOM元素
+        // DOM elements
         const form = document.getElementById('conjugationForm');
         const verbInput = document.getElementById('verb');
         const tenseSelect = document.getElementById('tense');
@@ -162,7 +162,7 @@
         const explanation = document.getElementById('explanation');
         const tips = document.getElementById('tips');
         
-        // 检查变位
+        // Check conjugation via API
         async function checkConjugation(event) {
             event.preventDefault();
             
@@ -192,7 +192,7 @@
                             },
                             {
                                 role: "user",
-                                content: `请分析法语动词 "${verb}" 在 ${tense} 时态下的变位。请返回正确的变位形式。以及变位的输出形式就是 人称 动词变位形式`
+                                content: `请分析法语动词 "${verb}" 在 ${tense} 时态下的变位。请以表格形式输出，每行显示人称和对应的动词变位，格式为：人称: 动词变位形式。请注意法语的省音现象，例如当“je”遇到元音开头的动词时应变为“j'”。`
                             }
                         ],
                         temperature: 0.7,
@@ -205,10 +205,10 @@
                 }
 
                 const data = await response.json();
-                const content = data.choices[0].message.content;
+                const apiResponse = data.choices[0].message.content;
                 
-                // 显示结果
-                displayResult(content, userAnswer, verb, tense);
+                // Display result using a formatted table
+                displayResult(apiResponse, userAnswer, verb, tense);
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -216,8 +216,9 @@
             }
         }
         
-        // 显示结果
+        // Display the result in a neatly formatted table
         function displayResult(apiResponse, userAnswer, verb, tense) {
+            // 判断用户答案是否正确（简单匹配，建议根据实际情况改进判断逻辑）
             const isCorrect = apiResponse.toLowerCase().includes(userAnswer.toLowerCase());
             
             resultSection.className = `p-4 rounded-lg mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
@@ -227,19 +228,34 @@
                 'Bravo ! Votre réponse est correcte.' : 
                 'Votre réponse n\'est pas correcte.';
             
-            correctAnswer.innerHTML = `Réponse correcte: <strong>${apiResponse}</strong>`;
+            // 将 API 返回的文本按换行分割，并解析成表格行
+            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300">`;
+            tableHTML += `<thead><tr><th class="border border-gray-300 p-2">Personne</th><th class="border border-gray-300 p-2">Conjugaison</th></tr></thead>`;
+            tableHTML += `<tbody>`;
+            const lines = apiResponse.split('\n').filter(line => line.trim() !== '');
+            for (const line of lines) {
+                const parts = line.split(/[:：]/);
+                if (parts.length >= 2) {
+                    const personne = parts[0].trim();
+                    const conjugaison = parts.slice(1).join(':').trim();
+                    tableHTML += `<tr><td class="border border-gray-300 p-2">${personne}</td><td class="border border-gray-300 p-2">${conjugaison}</td></tr>`;
+                }
+            }
+            tableHTML += `</tbody></table>`;
+            correctAnswer.innerHTML = `Réponse correcte: <br>${tableHTML}`;
+            
             explanation.textContent = `${tense}时态的变位规则说明`;
             tips.textContent = isCorrect ? 
                 'Continuez comme ça !' : 
                 `Conseil: Révisez la conjugaison des verbes au ${tense}.`;
             
-            // 更新统计
+            // 更新统计数据
             updateStats(isCorrect);
             // 更新历史记录
             updateHistory(verb, tense, userAnswer, apiResponse, isCorrect);
         }
         
-        // 更新统计
+        // Update statistics
         function updateStats(isCorrect) {
             stats.total++;
             if (isCorrect) stats.correct++;
@@ -250,8 +266,8 @@
                 `${Math.round((stats.correct / stats.total) * 100)}%`;
         }
         
-        // 更新历史记录
-        function updateHistory(verb, tense, userAnswer, correctAnswer, isCorrect) {
+        // Update history table
+        function updateHistory(verb, tense, userAnswer, correctAnswerText, isCorrect) {
             const historySection = document.getElementById('historySection');
             const historyTableBody = document.getElementById('historyTableBody');
             
@@ -264,27 +280,27 @@
                 <td class="border p-2">${verb}</td>
                 <td class="border p-2">${tense}</td>
                 <td class="border p-2">${userAnswer}</td>
-                <td class="border p-2">${correctAnswer}</td>
+                <td class="border p-2">${correctAnswerText}</td>
                 <td class="border p-2 text-center">${isCorrect ? '✅' : '❌'}</td>
             `;
             
             historyTableBody.insertBefore(row, historyTableBody.firstChild);
         }
         
-        // 随机动词
+        // Random verb
         document.getElementById('randomVerbBtn').addEventListener('click', () => {
             const randomIndex = Math.floor(Math.random() * randomVerbs.length);
             verbInput.value = randomVerbs[randomIndex];
         });
         
-        // 随机时态
+        // Random tense
         document.getElementById('randomTenseBtn').addEventListener('click', () => {
             const options = tenseSelect.options;
             const randomIndex = Math.floor(Math.random() * options.length);
             tenseSelect.selectedIndex = randomIndex;
         });
         
-        // 随机测试
+        // Random test reset
         document.getElementById('randomTestBtn').addEventListener('click', () => {
             document.getElementById('randomVerbBtn').click();
             document.getElementById('randomTenseBtn').click();
@@ -292,7 +308,7 @@
             resultSection.classList.add('hidden');
         });
         
-        // 表单提交
+        // Form submit event
         form.addEventListener('submit', checkConjugation);
     </script>
 </body>
